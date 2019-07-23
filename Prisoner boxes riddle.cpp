@@ -1,7 +1,7 @@
 // Prisoner boxes riddle.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <Header.h>
+#include <tools.h>
 
 #include <iostream>
 #include <chrono>
