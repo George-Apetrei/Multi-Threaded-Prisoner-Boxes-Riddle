@@ -1,7 +1,7 @@
 // Prisoner boxes riddle.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <tools.h>
+#include <Header.h>
 
 #include <iostream>
 #include <chrono>
@@ -36,7 +36,7 @@ void fill_boxes(int *boxes, int n) {
 }
 */
 
-void fill_boxes(std::vector<int> &boxes,int n) {
+void fill_boxes(std::vector<int> &boxes, int n) {
 	Rand_Num_Gen m;
 	for (int i = 0; i < n; i++) {			//Fill new vector with contents of boxes
 		boxes.push_back(i);
@@ -99,13 +99,13 @@ void calculate(int *boxes, int n) {
 
 /*
 void calculate(std::vector<int> boxes,std::vector<double> &percent_correct) {		//Function to find the correct box for each
-	
+
 	//Functionality:
 	//1-Start from the box marked with what you want to find (You want to find number 0, start at box 0)
 	//2-If true, mark as found, end
 	//3-If not true, go to the box corresponding to the number inside(Same as above but instead you find, for example 5, then you go to box 5 to check)
 	//4-Repeat from step 2 for n/2 iterations
-	
+
 
 	int node;		//Marks the node you're at
 	int True = 0, False = 0;	//Variables to hold the results
@@ -130,7 +130,7 @@ void calculate(std::vector<int> boxes,std::vector<double> &percent_correct) {		/
 			std::cout << " FOUND!\n";
 			found = 0;
 		}
-		else {					
+		else {
 			std::cout << " NOT found!\n";
 		}
 
@@ -158,58 +158,53 @@ void function() {
 
 }
 
-void calculate(std::vector<int> boxes, std::vector<double> &percent_correct) {
-	auto num_threads = std::thread::hardware_concurrency();	//Find the number of threads on the machine
-	if (num_threads <= 1) { num_threads=2; } //If there is only 1 thread on the system, make this number 2, so that at least a producer and a consumer will be created
-
-	Thread_Safe_Queue<int> q;
-	std::vector<std::thread> threads;
-	std::vector<int> results,runs;
-
-	std::atomic<bool> is_running=false;
-	
-	//Producer thread
-	threads.push_back(std::thread(
-		[&]() {
-		is_running = true;
-		for (auto& i : boxes) {
-			q.push_back(boxes[i]);
+void calculate(std::vector<int>& boxes, std::vector<double> &percent_correct) {
+		auto num_threads = std::thread::hardware_concurrency();	//Find the number of threads on the machine
+		if (num_threads <= 1) { num_threads = 2; } //If there is only 1 thread on the system, make this number 2, so that at least a producer and a consumer will be created
+		Thread_Safe_Queue<int> q;
+		std::vector<std::thread> threads;
+		std::vector<double> results, runs;
+		//Fill thread-safe queue
+		for (int i = 0; i < boxes.size(); ++i) {
+			q.push_back(i);
 		}
-		is_running = false;
-	}
-	));
 
+		//Prealocate results and runs
+		for (int i = 0; i < num_threads; ++i) {
+			results.push_back(0);
+			runs.push_back(0);
+		}
 
-	
-	//For loop to create the consumer threads, makes total number of threads on machine - 1, threads
-	for (int i = 0; i < num_threads-1; ++i) {
-		results.push_back(0);
-		runs.push_back(0);
-		threads.push_back(std::thread([&is_running,&q,&results,i,&boxes,&runs]() {
-			int item;
-			 while (is_running || (q.check()!=0)) {
-				 item = q.pop_back();
-				// std::cout << item << "\n";
-				results[i] += find_item(item, boxes);
-				runs[i]++;
+		std::atomic_uint total_count{ boxes.size() };
+
+		//For loop to create the consumer threads, makes total number of threads on machine, threads
+		for (int i = 0; i < num_threads; ++i) {
+
+			threads.push_back(std::thread([&total_count, &q, &results, i, &boxes, &runs]() {
+				int item;
+				while (true) {
+					int iterations = --total_count;
+					if (iterations < 0) break; // at this point there have been total_count pop_back operations done across all reader threads so we exit
+					item = q.pop_back();
+					// std::cout << item << "\n";
+					results.at(i) += find_item(item, boxes);
+					runs.at(i)++;
+				}
 			}
+			));
 		}
-		));
-	}
 
+		//Wait for  all threads to finish their workload
+		for (int i = 0; i < threads.size(); ++i) {
+			threads[i].join();
+		}
 
-	//Wait for  all threads to finish their workload
-
-	for (int i = 0; i < threads.size(); ++i) {
-		threads[i].join();
-	}
-
-	auto sum=0,sum_runs=0;
-	for (int i = 0; i < results.size();++i) {
+	auto sum = 0, sum_runs = 0;
+	for (int i = 0; i < results.size(); ++i) {
 		sum += results[i];
 		sum_runs += runs[i];
 	}
-	
+
 	percent_correct.push_back(results[0]);
 }
 
