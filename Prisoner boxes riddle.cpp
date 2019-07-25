@@ -11,31 +11,6 @@
 #include <thread>
 #include <atomic>
 
-/*
-void fill_boxes(int *boxes, int n) {
-
-	Rand_Num_Gen m;
-	int generated, check = 0;
-	for (int i = 0; i < n; ++i) {
-		generated = m.randomGenerator(0, n - 1);
-		for (int j = 0; j < i; ++j) {
-			if (boxes[j] == generated) {
-				check = 1;
-				break;
-			}
-		}
-		if (check == 0) {
-			boxes[i] = generated;
-		}
-		else {
-			check = 0;
-			i--;
-		}
-
-	}
-}
-*/
-
 void fill_boxes(std::vector<int> &boxes, int n) {
 	Rand_Num_Gen m;
 	for (int i = 0; i < n; i++) {			//Fill new vector with contents of boxes
@@ -55,49 +30,6 @@ void display(std::vector<int> boxes) {
 }
 
 /*
-void calculate(int *boxes, int n) {
-	std::vector <int> path;
-	int tru = 0, fals = 0, node, check = 0;
-
-	for (int i = 0; i < n; ++i) {					//For every box
-		node = boxes[i];
-		for (int j = 0; j < n / 2; ++j) {			//Search in half of total number of boxes
-			path.push_back(node);			//Push back the number of the box you're looking in
-			if (i == node) {				//If the number inside the box is the same as the number of the box you're looking for
-				tru++;						//Mark as found
-				check = 1;
-				break;
-			}
-			else {							//If not
-				node = boxes[node];			//Put in the box the number
-			}
-		}
-		if (check == 1) {
-			for (int m = 0; m < path.size(); ++m) {
-				if (m + 1 == path.size()) {
-					std::cout << path[m] << std::endl;
-				}
-				else {
-					std::cout << path[m] << "->";
-				}
-
-			}
-
-		}
-		else {
-			fals++;
-		}
-		check = 0;
-		path.clear();
-	}
-	std::cout << "True: " << tru << std::endl;
-	std::cout << "False: " << fals << std::endl;
-	std::cout << "Percentage correct: " << (100 * tru / n) << std::endl;
-}
-
-*/
-
-
 //This is the normal function, without any multi-threading
 double calculate2(std::vector<int> boxes) {		//Function to find the correct box for each
 	int node;		//Marks the node you're at
@@ -123,7 +55,7 @@ double calculate2(std::vector<int> boxes) {		//Function to find the correct box 
 	}
 return 100 * ((double)True / boxes.size());
 }
-
+*/
 
 int find_item(int item, std::vector<int>& boxes) {	//Function to search for a specific box in the boxes vector
 	int node = item;	//Node is used to point towards the box to be looked into
