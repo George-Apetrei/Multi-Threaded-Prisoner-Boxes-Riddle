@@ -1,7 +1,5 @@
-// Prisoner boxes riddle.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
 
-#include <Header.h>
+#include <tools.h>
 
 #include <iostream>
 #include <chrono>
@@ -30,7 +28,7 @@ void display(std::vector<int> boxes) {
 }
 
 /*
-//This is the normal function, without any multi-threading
+//This is the normal function, without any multi-threading, I left it here to compare the performance difference
 double calculate2(std::vector<int> boxes) {		//Function to find the correct box for each
 	int node;		//Marks the node you're at
 	int True = 0, False = 0;	//Variables to hold the results
@@ -115,12 +113,14 @@ double calculate(std::vector<int>& boxes) {	//Multi-threaded function to calcula
 		sum += results[i];
 	}
 	//Returns the % correct
-	return 100 * (double)sum / boxes.size();
+	return (100 * (double)sum) / boxes.size();
 }
 
-void random_finder(std::vector<int>& boxes) {
+double random_finder(std::vector<int>& boxes) {
 	Rand_Num_Gen m;
 	std::vector<std::vector<int>> search_tree;	//This vector holds all the searches to be performed for every item
+	//Loop to preallocate the space needed
+	//Vector of vector for every item to be searched for, each vector inside the vector of vectors hold the boxes to be checked for the result
 	for (int i = 0; i < boxes.size(); ++i) {
 		search_tree.push_back(std::vector<int>());
 		search_tree.at(i).reserve(boxes.size() / 2);
@@ -129,6 +129,7 @@ void random_finder(std::vector<int>& boxes) {
 	std::atomic_uint iterator{ boxes.size() };
 	std::vector<std::thread> threads;
 	Thread_Safe_Queue<int> q;
+	//Load the thread safe queue with all the indexes to be looked at
 	for (int i = 0; i < boxes.size(); ++i) {
 		q.push_back(i);
 	}
@@ -144,7 +145,7 @@ void random_finder(std::vector<int>& boxes) {
 				int queue = q.pop_front();//Get the item for which to create a queue from the thread_safe queue
 				for (int j = 0; j < boxes.size() / 2; ++j) {	//Fill the queue
 					int duplicate = 0;
-					int item_to_insert = m.randomGenerator(0, boxes.size());	//Get randomly generated item to insert
+					int item_to_insert = m.randomGenerator(0, boxes.size()-1);	//Get randomly generated item to insert
 					for (int k = 0; k < search_tree.at(queue).size(); ++k) {	//Loop through already existing items
 						if (item_to_insert == search_tree.at(queue).at(k)) {	//If duplicate is found, discard the iteration and start again, if not duplicate, add item to queue
 							duplicate++;
@@ -167,7 +168,46 @@ void random_finder(std::vector<int>& boxes) {
 		threads.at(i).join();
 	}
 
+	iterator.store(boxes.size());	//Reset atomic iterator to go through all the vectors
 
+	//Load thread safe queue once again
+	for (int i = 0; i < boxes.size(); ++i) {
+		q.push_back(i);
+	}
+
+	std::vector<int> results;	//This vector will hold, for each thread, the number of results that they have found
+	//Preallocate the vector with a num_thread number of elements and initialize them all with 0
+	for (int i = 0; i < num_threads; ++i) {
+		results.push_back(0);
+	}
+
+	for (int i = 0; i < num_threads; ++i) {
+		//Use already created threads
+		threads.at(i) = std::thread([&iterator,i,&search_tree,&boxes,&q,&results]() {
+			while (true) {
+				int local_iterator = --iterator;
+				if (local_iterator < 0) break;
+				int line = q.pop_front();
+				for (int j = 0; j < search_tree[line].size(); ++j) {	//Look inside the box that the queue of boxes is poiting at
+					if (boxes.at(search_tree.at(line).at(j))==line) {	//If the item is found, mark as found and exit, else continue looking at the next element the queue is poiting at
+						results.at(i)+=1;
+						break;
+					}
+				}
+			}
+		});
+	}
+
+	//Wait for all threads
+	for (int i = 0; i < num_threads; ++i) {
+		threads.at(i).join();
+	}
+
+	int sum=0;
+	for (int i = 0; i < results.size(); ++i) {
+		sum += results[i];
+	}
+	return 100 * (double)sum / boxes.size();
 }
 
 int main() {
@@ -176,37 +216,39 @@ int main() {
 	Rand_Num_Gen m;
 	//Call m.randomGenerator(lower_limit, upper_limit) to use
 	Time_Measure t;
-	int n;
+	int n,sets;
+	std::cout << "Number of boxes\n";
 	std::cin >> n;
-	std::vector<int> boxes;
-	std::vector<double> percent_correct;
-	t.now();
-	for (int i = 0; i < 1; ++i) {
-		fill_boxes(boxes, n);
-		//display(boxes);
-		random_finder(boxes);
-		//percent_correct.push_back(calculate(boxes));
-
-		//calculate2(boxes, percent_correct);
-
-		boxes.clear();
+	std::cout << "Number of sets to be checked\n";
+	std::cin >> sets;
+	std::vector<std::vector<int>> boxes;
+	std::vector<double> percent_correct,percent_correct_random;
+	//Go through all the sets
+	for (int i = 0; i < sets; ++i) {
+		boxes.push_back(std::vector<int>());//Add vector
+		fill_boxes(boxes.at(i), n);	//Fill and scramble vector
+		percent_correct.push_back(calculate(boxes.at(i)));	//Using the algorithm search for items inside the boxes
+		percent_correct_random.push_back(random_finder(boxes.at(i)));	//Search for items using a random search
 	}
-	t.now();
-	t.print(2);
-	int correct = 0, incorrect = 0;
+	int correct = 0, correct_random = 0;
+	//Check how many sets have been 100% found
 	for (int i = 0; i < percent_correct.size(); ++i) {
 		if (percent_correct[i] == 100) {
 			correct++;
 		}
-		else {
-			incorrect++;
+		if (percent_correct_random[i] == 100) {
+			correct_random++;
 		}
 	}
 
 	double average = 100*(double)correct / percent_correct.size();
-	std::cout << "Out of " << percent_correct.size() << " sets of "<<n<<" numbers, there are" << correct << " sets where all the items have been found, average of " << average << " sets where all the items have been found\n";
-	//random_finder(boxes, n);
-	std::cin >> n;
-
+	double average_random = 100 * (double)correct_random / percent_correct_random.size();
+	std::cout << "Using the algorithm:\n";
+	std::cout << "Out of " << sets << " sets of "<<n<<" numbers, there are " << correct << " sets where all the items have been found, average of " << average << "% sets where all the items have been found\n";
+	std::cout << "Using randomness:\n";
+	std::cout << "Out of " << sets << " sets of " << n << " numbers, there are " << correct_random << " sets where all the items have been found, average of " << average_random << "% sets where all the items have been found\n";
+	std::cout << "Press enter to exit\n";
+	std::getchar();
+	std::getchar();
 }
 
