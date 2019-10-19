@@ -1,5 +1,5 @@
 
-#include <tools.h>
+#include "tools.h"
 
 #include <iostream>
 #include <chrono>
@@ -69,7 +69,7 @@ int find_item(int item, std::vector<int>& boxes) {	//Function to search for a sp
 	return 0;		//If the item has not been found
 }
 
-double calculate(std::vector<int>& boxes) {	//Multi-threaded function to calcula
+double calculate(std::vector<int>& boxes) {	//Multi-threaded function to calculate using the algorithm from the video
 		auto num_threads = std::thread::hardware_concurrency();	//Find the number of threads on the machine
 		Thread_Safe_Queue<int> q;
 		std::vector<std::thread> threads;
@@ -116,7 +116,7 @@ double calculate(std::vector<int>& boxes) {	//Multi-threaded function to calcula
 	return (100 * (double)sum) / boxes.size();
 }
 
-double random_finder(std::vector<int>& boxes) {
+double random_finder(std::vector<int>& boxes) {		//Calculate using the randomness method
 	Rand_Num_Gen m;
 	std::vector<std::vector<int>> search_tree;	//This vector holds all the searches to be performed for every item
 	//Loop to preallocate the space needed
